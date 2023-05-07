@@ -1,11 +1,14 @@
-import skfuzzy as fuzz
-from skfuzzy import cmeans
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.decomposition import PCA
-import numpy as np
 import random
-import pandas as pd
+
+import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler
+
+matplotlib.use('Agg')
+
 
 scaler = MinMaxScaler()
 pca = PCA(n_components=3)
@@ -19,7 +22,13 @@ centers = []
 
 cluster_labels = ['Sangat Laris', 'Laris', 'Tidak Laris']
 
-df_pca = pd.read_csv("static/data.csv")
+df_processed = pd.read_csv("static/data.csv")
+df_pca = pca.fit_transform(df_processed)
+
+for i in range(n_clusters):
+    center = [random.uniform(df_pca[:, 0].min(), df_pca[:, 0].max()), random.uniform(
+        df_pca[:, 1].min(), df_pca[:, 1].max()), random.uniform(df_pca[:, 2].min(), df_pca[:, 2].max())]
+    centers.append(center)
 
 
 def preprocess_df(df1, df2, df3):
@@ -75,15 +84,12 @@ def fuzzy_c_means(data, n_clusters, m, epsilon=0.001, max_iter=10):
     return centers, membership_matrix
 
 
-centers, membership_matrix = fuzzy_c_means(
-    df_pca, n_clusters, m, epsilon=epsilon, max_iter=max_iter)
-cluster_membership = np.argmax(membership_matrix, axis=1)
-
-
-def visualization():
-    df_pca['cluster'] = [cluster_labels[c] for c in cluster_membership]
+def visualization(cluster_membership, centers):
+    global df_pca  # define df_pca as a global variable
+    df = pd.DataFrame(df_pca[:, :2])
+    df['cluster'] = [cluster_labels[c] for c in cluster_membership]
     fig, ax = plt.subplots(figsize=(10, 6))
-    scatter = ax.scatter(preprocess_df.df_pca[:, 0], preprocess_df.df_pca[:, 1],
+    scatter = ax.scatter(df.iloc[:, 0], df.iloc[:, 1],
                          c=cluster_membership, cmap='rainbow')
     legend = ax.legend(*scatter.legend_elements(),
                        loc="upper right", title="Clusters")
@@ -92,9 +98,7 @@ def visualization():
         legend.get_texts()[i].set_text(label)
     for i in range(n_clusters):
         plt.scatter(centers[i][0], centers[i][1], marker='x',
-                    s=100, linewidhts=2, color='black')
-
-    # add axis labels and title
+                    s=100, linewidths=2, color='black')
     plt.xlabel('PC 1')
     plt.ylabel('PC 2')
     plt.colorbar(scatter)
